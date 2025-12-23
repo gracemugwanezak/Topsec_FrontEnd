@@ -1,0 +1,20 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+export default function DarkModeToggle() {
+    const [dark, setDark] = useState(false);
+
+    useEffect(() => {
+        document.documentElement.classList.toggle("dark", dark);
+    }, [dark]);
+
+    return (
+        <button
+            onClick={() => setDark(!dark)}
+            className="px-3 py-1 border rounded text-sm"
+        >
+            {dark ? "Light Mode" : "Dark SOC Mode"}
+        </button>
+    );
+}

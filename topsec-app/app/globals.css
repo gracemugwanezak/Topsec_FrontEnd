@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  --dashboard-bg: #E9EBEF;
+  --sidebar-bg: #1B2537;
+  --card-bg: #F9F8F3;
+  --primary-yellow: #F59E0B; /* The specific dark yellow from your image */
+  --text-main: #1B2537;
+  --error-red: #ED1C24;    /* Reserved only for delete/errors */
+}
+
+body {
+  background-color: var(--dashboard-bg) !important;
+  color: var(--text-main);
+}
+
+.operation-card {
+  background-color: var(--card-bg);
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.operation-card:hover {
+  transform: translateY(-4px);
+}
