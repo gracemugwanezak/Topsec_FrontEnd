@@ -1,104 +1,129 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import { Search, UserPlus, ShieldCheck, Loader2 } from "lucide-react";
+import { Search, UserPlus, ShieldCheck, Loader2, MapPin, ArrowRightLeft, UserMinus } from "lucide-react";
+import GuardFormModal from "../components/GuardFormModal.tsx";
 
 export default function GuardsPage() {
-    const [guards, setGuards] = useState<unknown[]>([]);
+    const [guards, setGuards] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    useEffect(() => {
-        const fetchGuards = async () => {
-            try {
-                const res = await api.get("/guards");
-                let data: unknown[] = [];
-                if (Array.isArray(res)) data = res;
-                else if (res && typeof res === 'object') {
-                    const container = (res as unknown) as Record<string, unknown>;
-                    if (Array.isArray(container.data)) data = container.data;
-                }
-                setGuards(data);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchGuards();
-    }, []);
+    const fetchGuards = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get("/guards");
+            const data = Array.isArray(res) ? res : (res as any).data || [];
+            setGuards(data);
+        } catch (e) { console.error(e); } finally { setLoading(false); }
+    };
+
+    useEffect(() => { fetchGuards(); }, []);
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#0B1E3D]">
-            {/* HEADER */}
-            <header className="h-24 bg-[#F9F8F3] px-8 flex items-center justify-between sticky top-0 z-40 border-b border-black/5 shadow-sm">
-                <div>
-                    <h1 className="text-2xl font-black text-[#0B1E3D] uppercase italic tracking-tighter leading-none">
-                        Personnel <span className="text-red-600">Roster</span>
-                    </h1>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Active Security Force</p>
+        <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
+            {/* COMPACT HEADER */}
+            <header className="bg-white px-6 py-3 flex items-center justify-between border-b sticky top-0 z-50">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-lg font-bold text-slate-800 tracking-tight">Personnel Database</h1>
+                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                        {guards.length} Records
+                    </span>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                         <input
                             type="text"
-                            placeholder="Search by name..."
-                            className="pl-10 pr-4 py-2 bg-white border-none rounded-xl text-sm focus:ring-2 focus:ring-red-600 w-64 shadow-inner"
+                            placeholder="Filter by name or ID..."
+                            className="pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs w-64 outline-none focus:ring-2 focus:ring-amber-500/20"
                         />
                     </div>
-                    <button className="flex items-center gap-2 bg-[#0B1E3D] text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all">
-                        <UserPlus size={14} />
-                        Register Guard
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 bg-[#1A2A4A] text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-amber-500 transition-all"
+                    >
+                        <UserPlus size={14} /> New Guard
                     </button>
                 </div>
             </header>
 
-            {/* GUARDS GRID */}
-            <main className="p-8 flex-1">
-                {loading ? (
-                    <div className="flex justify-center items-center h-64 text-white/20">
-                        <Loader2 className="animate-spin" size={48} />
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {guards.map((untypedGuard) => {
-                            const guard = (untypedGuard as unknown) as Record<string, any>;
-                            return (
-                                <div key={guard.id} className="bg-[#F9F8F3] rounded-[2rem] p-6 shadow-2xl flex flex-col group transition-all duration-500 hover:translate-y-[-4px]">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#0B1E3D] flex items-center justify-center text-white shadow-lg">
-                                            <ShieldCheck size={24} />
+            <main className="p-6">
+                {/* COMPACT STATS (Smaller Footprint) */}
+                <div className="flex gap-4 mb-6">
+                    {[{ label: "Total Personnel", val: guards.length, color: "slate" },
+                    { label: "Unassigned", val: guards.filter(g => !g.posts?.length).length, color: "amber" }
+                    ].map((stat, i) => (
+                        <div key={i} className="bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</span>
+                            <span className={`text-lg font-black text-${stat.color}-600`}>{stat.val}</span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* DENSE LIST VIEW (Best for 5000+ records) */}
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Officer</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">National ID</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Current Deployment</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {loading ? (
+                                <tr><td colSpan={4} className="py-20 text-center"><Loader2 className="animate-spin inline text-amber-500" /></td></tr>
+                            ) : guards.map((guard) => (
+                                <tr key={guard.id} className="hover:bg-slate-50/80 transition-colors group">
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">
+                                                <ShieldCheck size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-800 uppercase italic leading-none">{guard.name}</p>
+                                                <p className="text-[9px] text-slate-400 mt-1 font-mono">ID-{guard.id}</p>
+                                            </div>
                                         </div>
-                                        <span className="text-[10px] font-black text-slate-300">ID: {String(guard.id).slice(-4)}</span>
-                                    </div>
-
-                                    <h2 className="text-xl font-black text-[#0B1E3D] italic uppercase leading-none tracking-tighter mb-1">
-                                        {guard.first_name} {guard.last_name}
-                                    </h2>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">
-                                        National ID: {guard.national_id || "N/A"}
-                                    </p>
-
-                                    <div className="mt-auto pt-4 border-t border-black/5">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className="text-[8px] font-black text-slate-400 uppercase">Current Status</span>
-                                            <span className="text-[9px] font-black text-green-600 uppercase bg-green-50 px-2 py-1 rounded-md">
-                                                Available
-                                            </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">{guard.idNumber || "Not Set"}</td>
+                                    <td className="px-4 py-3">
+                                        {guard.posts && guard.posts.length > 0 ? (
+                                            <div className="flex items-center gap-2 text-green-600">
+                                                <MapPin size={12} />
+                                                <span className="text-[10px] font-black uppercase italic">{guard.posts[0].post.title}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded uppercase">Unassigned</span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                title="Assign/Reassign"
+                                                className="p-2 text-slate-400 hover:bg-amber-500 hover:text-white rounded-lg transition-all"
+                                            >
+                                                <ArrowRightLeft size={14} />
+                                            </button>
+                                            <button
+                                                title="Remove from system"
+                                                className="p-2 text-slate-400 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+                                            >
+                                                <UserMinus size={14} />
+                                            </button>
                                         </div>
-
-                                        {/* CHANGED "STATION INTEL" TO "VIEW PROFILE" */}
-                                        <button className="w-full py-3 bg-red-600 hover:bg-[#0B1E3D] text-white rounded-xl shadow-md text-[10px] font-black uppercase tracking-widest transition-all">
-                                            View Profile
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </main>
+
+            {isModalOpen && <GuardFormModal guard={null} onClose={() => setIsModalOpen(false)} onSuccess={fetchGuards} />}
         </div>
     );
 }
