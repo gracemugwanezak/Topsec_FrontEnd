@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { api } from "../../lib/api";
 import { LayoutDashboard, Shield, Users, MapPin, ClipboardList } from "lucide-react";
@@ -39,17 +40,18 @@ export default function Sidebar() {
     ];
 
     return (
-        /* FORCED BLUE SIDEBAR */
         <aside className="flex flex-col h-full w-full bg-[#0B1E3D]">
-            <div className="p-6 shrink-0">
-                <div className="bg-white p-4 rounded-2xl shadow-xl">
-                    <h2 className="text-lg font-black uppercase italic tracking-tighter flex flex-col leading-tight text-[#0B1E3D]">
-                        TOPSEC
-                        {/* CHANGED: Red text changed to Yellow/Amber */}
-                        <span className="text-[#F59E0B] text-[9px] tracking-[0.2em] not-italic font-bold border-t border-gray-100 mt-1 pt-1">
-                            INVESTMENTS LTD
-                        </span>
-                    </h2>
+            {/* UPDATED LOGO SECTION: Matched padding to nav items (px-4) */}
+            <div className="px-4 pt-6 pb-4 shrink-0">
+                <div className="bg-white px-5 py-4 rounded-xl shadow-xl flex items-center justify-center overflow-hidden min-h-[80px]">
+                    <Image
+                        src="/Topsec_logo.jpeg"
+                        alt="Topsec Logo"
+                        width={160}
+                        height={50}
+                        style={{ objectFit: 'contain' }}
+                        priority
+                    />
                 </div>
             </div>
 
@@ -60,19 +62,16 @@ export default function Sidebar() {
                         <Link
                             key={item.path}
                             href={item.path}
-                            /* CHANGED: bg-red-600 changed to bg-[#F59E0B] */
                             className={`flex items-center justify-between px-5 py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${isActive
-                                    ? "bg-[#F59E0B] text-white shadow-lg translate-x-1"
-                                    : "text-white/40 hover:bg-white/5 hover:text-white"
+                                ? "bg-[#F59E0B] text-white shadow-lg translate-x-1"
+                                : "text-white/40 hover:bg-white/5 hover:text-white"
                                 }`}
                         >
                             <div className="flex items-center gap-3">
-                                {/* CHANGED: Icon color for inactive links to a softer blue-gray */}
                                 <span className={isActive ? "text-white" : "text-slate-500"}>{item.icon}</span>
                                 {item.name}
                             </div>
                             {item.count !== undefined && (
-                                /* CHANGED: Red badge changed to a dark amber overlay */
                                 <span className={`px-2 py-0.5 rounded-md text-[9px] font-black min-w-[20px] text-center ${isActive ? "bg-black/20 text-white" : "bg-blue-600/20 text-blue-400"
                                     }`}>
                                     {item.count}
@@ -82,6 +81,7 @@ export default function Sidebar() {
                     );
                 })}
             </nav>
+
             <div className="p-4 bg-black/20 border-t border-white/5 shrink-0">
                 <div className="flex items-center gap-2 px-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />

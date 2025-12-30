@@ -44,15 +44,15 @@ export default function DashboardPage() {
   // --- ENHANCED QUOTA CALCULATIONS ---
   const metrics = useMemo(() => {
     return data.posts.reduce((acc, post: any) => {
-      // 1. Calculate Current Assignments
-      const dayAssignments = post.guards?.filter((g: any) => g.shift === "DAY").length || 0;
-      const nightAssignments = post.guards?.filter((g: any) => g.shift === "NIGHT").length || 0;
+      // Safeguard against missing guard arrays
+      const postGuards = post.guards || [];
 
-      // 2. Determine Required Quotas (with defaults if database fields are null)
+      const dayAssignments = postGuards.filter((g: any) => g.shift === "DAY").length;
+      const nightAssignments = postGuards.filter((g: any) => g.shift === "NIGHT").length;
+
       const reqDay = post.requiredDayGuards ?? 0;
       const reqNight = post.requiredNightGuards ?? 0;
 
-      // 3. Calculate Shortages (Unmanned Slots)
       const dayShortage = Math.max(0, reqDay - dayAssignments);
       const nightShortage = Math.max(0, reqNight - nightAssignments);
 
@@ -67,7 +67,6 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#E9EBEF]">
-      {/* HEADER SECTION */}
       <header className="h-24 bg-white/80 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-40 border-b border-black/5">
         <div>
           <h1 className="text-xl font-black text-[#1B2537] uppercase tracking-tighter">Operations Dashboard</h1>
@@ -93,14 +92,12 @@ export default function DashboardPage() {
       </header>
 
       <main className="p-8 flex-1 max-w-[1600px] mx-auto w-full">
-        {/* ACTION BAR */}
         <div className="flex gap-4 mb-8">
           <button className="bg-[#1B2537] text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 shadow-lg hover:bg-orange-500 transition-colors">
             <Activity size={14} /> New Deployment
           </button>
         </div>
 
-        {/* SUMMARY SECTION */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <StatCard
             title="Total Guards"
@@ -132,7 +129,6 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* LIVE SITE MONITOR GRID */}
         <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
           <div className="h-px flex-1 bg-slate-200" />
           Live Site Monitor
