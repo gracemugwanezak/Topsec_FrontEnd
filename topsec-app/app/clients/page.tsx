@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import AddPostModal from "../components/AddPostModal";
 import AddClientModal from "../components/AddClientModal";
 import { api } from "@/lib/api";
-import { Building2, Plus, Trash2, MapPin, Calendar } from "lucide-react";
+import { Building2, Plus, Trash2, MapPin, Calendar, Shield, Layout } from "lucide-react";
 
 interface Client {
     id: number;
@@ -46,7 +47,6 @@ export default function ClientsPage() {
 
     return (
         <div className="flex flex-col min-h-full">
-            {/* HEADER: Clean & Fixed */}
             <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-20">
                 <div>
                     <h1 className="text-xl font-black text-[#0B1E3D] uppercase italic tracking-tighter leading-none">
@@ -63,7 +63,6 @@ export default function ClientsPage() {
                 </button>
             </header>
 
-            {/* GRID: Compact & Scalable */}
             <div className="p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                 {isLoading ? (
                     <div className="col-span-full py-20 text-center">
@@ -72,44 +71,48 @@ export default function ClientsPage() {
                     </div>
                 ) : (
                     clients.map((client) => (
-                        <div
-                            key={client.id}
-                            className="bg-white rounded-2xl border border-slate-200 flex flex-col h-[200px] group transition-all duration-300 hover:shadow-xl hover:border-red-500/50 relative"
-                        >
-                            {/* Top Accent */}
+                        <div key={client.id} className="bg-white rounded-2xl border border-slate-200 flex flex-col h-[210px] group transition-all duration-300 hover:shadow-xl hover:border-red-500/50 relative">
                             <div className="h-1 w-full bg-[#0B1E3D] group-hover:bg-red-600 transition-colors rounded-t-2xl" />
 
                             <div className="p-4 flex flex-col h-full">
-                                {/* ID & Status */}
                                 <div className="flex justify-between items-center mb-1">
-                                    <span className="text-[8px] font-black text-slate-300">ID: {String(client.id).padStart(3, '0')}</span>
+                                    <span className="text-[8px] font-black text-slate-300 uppercase">Ref: {String(client.id).padStart(3, '0')}</span>
                                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
                                 </div>
 
-                                {/* Name & Location */}
                                 <div className="mb-3">
-                                    <h2 className="text-base font-black text-[#0B1E3D] uppercase italic leading-tight truncate">
-                                        {client.name}
-                                    </h2>
+                                    <h2 className="text-base font-black text-[#0B1E3D] uppercase italic leading-tight truncate">{client.name}</h2>
                                     <div className="flex items-center gap-1 text-slate-400 mt-0.5">
                                         <MapPin size={10} />
                                         <span className="text-[9px] font-bold uppercase truncate">{client.location}</span>
                                     </div>
                                 </div>
 
-                                {/* Mini Stats Box */}
+                                {/* Linkable Stats Box */}
                                 <div className="flex gap-2 mb-4">
-                                    <div className="flex-1 bg-slate-50 border border-slate-100 p-2 rounded-lg text-center">
-                                        <p className="text-[7px] font-black text-slate-400 uppercase">Posts</p>
-                                        <p className="text-xs font-black text-[#0B1E3D]">{client.postCount || 0}</p>
-                                    </div>
-                                    <div className="flex-1 bg-slate-50 border border-slate-100 p-2 rounded-lg text-center">
-                                        <p className="text-[7px] font-black text-slate-400 uppercase">Guards</p>
-                                        <p className="text-xs font-black text-[#0B1E3D]">{client.guardCount || 0}</p>
-                                    </div>
+                                    <Link
+                                        href={`/posts?clientId=${client.id}`}
+                                        className="flex-1 bg-slate-50 border border-slate-100 p-2 rounded-lg text-center hover:bg-blue-50 hover:border-blue-200 transition-all group/stat"
+                                    >
+                                        <div className="flex items-center justify-center gap-1 mb-0.5">
+                                            <Layout size={8} className="text-slate-400 group-hover/stat:text-blue-500" />
+                                            <p className="text-[7px] font-black text-slate-400 uppercase group-hover/stat:text-blue-500">Posts</p>
+                                        </div>
+                                        <p className="text-sm font-black text-[#0B1E3D] group-hover/stat:text-blue-700">{client.postCount || 0}</p>
+                                    </Link>
+
+                                    <Link
+                                        href={`/guards?clientName=${encodeURIComponent(client.name)}`}
+                                        className="flex-1 bg-slate-50 border border-slate-100 p-2 rounded-lg text-center hover:bg-emerald-50 hover:border-emerald-200 transition-all group/stat"
+                                    >
+                                        <div className="flex items-center justify-center gap-1 mb-0.5">
+                                            <Shield size={8} className="text-slate-400 group-hover/stat:text-emerald-500" />
+                                            <p className="text-[7px] font-black text-slate-400 uppercase group-hover/stat:text-emerald-500">Guards</p>
+                                        </div>
+                                        <p className="text-sm font-black text-[#0B1E3D] group-hover/stat:text-emerald-700">{client.guardCount || 0}</p>
+                                    </Link>
                                 </div>
 
-                                {/* Footer Actions */}
                                 <div className="mt-auto flex gap-2">
                                     <button
                                         onClick={() => setActiveClientForPost(client)}
@@ -130,7 +133,6 @@ export default function ClientsPage() {
                 )}
             </div>
 
-            {/* MODALS */}
             {isAddClientModalOpen && (
                 <AddClientModal onClose={() => setIsAddClientModalOpen(false)} onSuccess={loadData} />
             )}

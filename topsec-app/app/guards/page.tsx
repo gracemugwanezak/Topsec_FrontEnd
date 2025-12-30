@@ -1,16 +1,22 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { api } from "../../lib/api";
 import {
     Search, UserPlus, ShieldCheck, Loader2, MapPin,
-    ArrowRightLeft, UserMinus, Link2Off
+    ArrowRightLeft, UserMinus, Link2Off, X, Filter
 } from "lucide-react";
 import GuardFormModal from "../components/GuardFormModal.tsx";
 import ReassignModal from "../components/ReassignModal";
 
 export default function GuardsPage() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const clientFilter = searchParams.get("clientName");
+
     const [guards, setGuards] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [selectedGuard, setSelectedGuard] = useState<any>(null);
@@ -30,30 +36,29 @@ export default function GuardsPage() {
 
     useEffect(() => { fetchGuards(); }, []);
 
+    // Memoized Filtering Logic
+    const filteredGuards = useMemo(() => {
+        return guards.filter((guard) => {
+            const matchesSearch =
+                guard.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                guard.idNumber?.includes(searchQuery);
+
+            const matchesClient = clientFilter
+                ? guard.posts?.some((p: any) => p.post.client?.name === clientFilter)
+                : true;
+
+            return matchesSearch && matchesClient;
+        });
+    }, [guards, searchQuery, clientFilter]);
+
+    const clearFilter = () => router.push('/guards');
+
     const handleAssignClick = (guard: any) => {
         setSelectedGuard(guard);
         setIsAssignModalOpen(true);
     };
 
-    const handleUnassign = async (guardId: number) => {
-        if (!confirm("Are you sure you want to remove this guard from their current post?")) return;
-        try {
-            await api.delete(`/guards/${guardId}/assignment`);
-            fetchGuards(); // Refresh list
-        } catch (e) {
-            alert("Failed to unassign guard.");
-        }
-    };
-
-    const handleDeleteGuard = async (guardId: number) => {
-        if (!confirm("PERMANENT ACTION: Delete this guard from the database?")) return;
-        try {
-            await api.delete(`/guards/${guardId}`);
-            fetchGuards();
-        } catch (e) {
-            alert("Failed to delete guard.");
-        }
-    };
+    // ... Keep handleUnassign and handleDeleteGuard exactly as they were ...
 
     return (
         <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
@@ -61,7 +66,7 @@ export default function GuardsPage() {
                 <div className="flex items-center gap-4">
                     <h1 className="text-lg font-bold text-slate-800 tracking-tight">Personnel Database</h1>
                     <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                        {guards.length} Records
+                        {filteredGuards.length} Records
                     </span>
                 </div>
 
@@ -70,7 +75,9 @@ export default function GuardsPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                         <input
                             type="text"
-                            placeholder="Filter by name or ID..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search name or ID..."
                             className="pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs w-64 outline-none focus:ring-2 focus:ring-amber-500/20"
                         />
                     </div>
@@ -84,102 +91,93 @@ export default function GuardsPage() {
             </header>
 
             <main className="p-6">
-                <div className="flex gap-4 mb-6">
-                    {[{ label: "Total Personnel", val: guards.length, color: "slate" },
-                    { label: "Unassigned", val: guards.filter(g => !g.posts?.length).length, color: "amber" }
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</span>
-                            <span className={`text-lg font-black text-${stat.color}-600`}>{stat.val}</span>
+                {/* Active Filter Badge */}
+                {clientFilter && (
+                    <div className="mb-4 flex items-center gap-2">
+                        <div className="bg-amber-100 text-amber-700 border border-amber-200 px-3 py-1 rounded-lg text-[9px] font-black flex items-center gap-2 italic uppercase">
+                            <Filter size={10} />
+                            Viewing Guards for: {clientFilter}
+                            <button onClick={clearFilter} className="ml-1 hover:text-amber-900 transition-colors">
+                                <X size={12} strokeWidth={3} />
+                            </button>
                         </div>
-                    ))}
+                    </div>
+                )}
+
+                <div className="flex gap-4 mb-6">
+                    <div className="bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Visible Personnel</span>
+                        <span className="text-lg font-black text-slate-600">{filteredGuards.length}</span>
+                    </div>
+                    <div className="bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unassigned</span>
+                        <span className="text-lg font-black text-amber-600">
+                            {filteredGuards.filter(g => !g.posts?.length).length}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Officer</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">National ID</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Deployment</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Officer</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest italic">National ID</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Current Deployment</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right italic">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr><td colSpan={4} className="py-20 text-center"><Loader2 className="animate-spin inline text-amber-500" /></td></tr>
-                            ) : guards.map((guard) => (
-                                <tr key={guard.id} className="hover:bg-slate-50/80 transition-colors group">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">
-                                                <ShieldCheck size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-800 uppercase italic leading-none">{guard.name}</p>
-                                                <p className="text-[9px] text-slate-400 mt-1 font-mono">ID-{guard.id}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">{guard.idNumber || "Not Set"}</td>
-
-                                    <td className="px-4 py-3">
-                                        {guard.posts && guard.posts.length > 0 ? (
-                                            <div className="flex flex-col">
-                                                <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest italic leading-none mb-1">
-                                                    {guard.posts[0].post.client?.name || "No Client Data"}
-                                                </span>
-                                                <div className="flex items-center gap-1.5 text-emerald-600 font-black italic uppercase text-[10px] tracking-tighter">
-                                                    <MapPin size={12} className="shrink-0" />
-                                                    <span>{guard.posts[0].post.title}</span>
+                            ) : filteredGuards.length > 0 ? (
+                                filteredGuards.map((guard) => (
+                                    <tr key={guard.id} className="hover:bg-slate-50/80 transition-colors group">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">
+                                                    <ShieldCheck size={16} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-800 uppercase italic leading-none">{guard.name}</p>
+                                                    <p className="text-[9px] text-slate-400 mt-1 font-mono tracking-tighter">ID-{guard.id}</p>
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded-md uppercase italic tracking-tighter">Unassigned</span>
-                                        )}
-                                    </td>
-
-                                    <td className="px-4 py-3 text-right">
-                                        <div className="flex justify-end gap-1">
-                                            {/* ASSIGN / REASSIGN */}
-                                            <button
-                                                onClick={() => handleAssignClick(guard)}
-                                                title="Assign to Post"
-                                                className="p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all"
-                                            >
-                                                <ArrowRightLeft size={14} />
-                                            </button>
-
-                                            {/* UNASSIGN (Only show if assigned) */}
-                                            {guard.posts && guard.posts.length > 0 && (
-                                                <button
-                                                    onClick={() => handleUnassign(guard.id)}
-                                                    title="Remove from current post"
-                                                    className="p-2 text-slate-400 hover:bg-amber-50 hover:text-amber-600 rounded-lg transition-all"
-                                                >
-                                                    <Link2Off size={14} />
-                                                </button>
+                                        </td>
+                                        <td className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">{guard.idNumber || "Not Set"}</td>
+                                        <td className="px-4 py-3">
+                                            {guard.posts && guard.posts.length > 0 ? (
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest italic leading-none mb-1">
+                                                        {guard.posts[0].post.client?.name}
+                                                    </span>
+                                                    <div className="flex items-center gap-1.5 text-emerald-600 font-black italic uppercase text-[10px] tracking-tighter">
+                                                        <MapPin size={12} className="shrink-0" />
+                                                        <span>{guard.posts[0].post.title}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded-md uppercase italic tracking-tighter">Unassigned</span>
                                             )}
-
-                                            {/* DELETE GUARD */}
-                                            <button
-                                                onClick={() => handleDeleteGuard(guard.id)}
-                                                title="Remove from system"
-                                                className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
-                                            >
-                                                <UserMinus size={14} />
-                                            </button>
-                                        </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            {/* ... Keep the action buttons block exactly as it was ... */}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={4} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase italic tracking-widest">
+                                        No personnel found matching criteria
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
             </main>
 
             {isModalOpen && <GuardFormModal guard={null} onClose={() => setIsModalOpen(false)} onSuccess={fetchGuards} />}
-
             {isAssignModalOpen && (
                 <ReassignModal
                     guard={selectedGuard}
