@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../../lib/api";
 import StatCard from "../components/StatCard";
 import {
@@ -17,7 +17,6 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStatus("idle");
 
-      // Fetching all operational data to calculate the summary
       const [postsRes, guardsRes, clientsRes] = await Promise.all([
         api.get("/posts"),
         api.get("/guards"),
@@ -34,7 +33,6 @@ export default function DashboardPage() {
       console.error("Critical Sync Failure:", err);
       setSyncStatus("error");
     } finally {
-      // Small delay to make the UI transition feel smooth
       setTimeout(() => setIsSyncing(false), 600);
     }
   }, []);
@@ -43,10 +41,29 @@ export default function DashboardPage() {
     fetchOpsData();
   }, [fetchOpsData]);
 
-  // --- Dynamic Calculations ---
+  // --- ENHANCED QUOTA CALCULATIONS ---
+  const metrics = useMemo(() => {
+    return data.posts.reduce((acc, post: any) => {
+      // 1. Calculate Current Assignments
+      const dayAssignments = post.guards?.filter((g: any) => g.shift === "DAY").length || 0;
+      const nightAssignments = post.guards?.filter((g: any) => g.shift === "NIGHT").length || 0;
+
+      // 2. Determine Required Quotas (with defaults if database fields are null)
+      const reqDay = post.requiredDayGuards ?? 0;
+      const reqNight = post.requiredNightGuards ?? 0;
+
+      // 3. Calculate Shortages (Unmanned Slots)
+      const dayShortage = Math.max(0, reqDay - dayAssignments);
+      const nightShortage = Math.max(0, reqNight - nightAssignments);
+
+      acc.totalDeployed += (dayAssignments + nightAssignments);
+      acc.totalUnmannedSlots += (dayShortage + nightShortage);
+
+      return acc;
+    }, { totalDeployed: 0, totalUnmannedSlots: 0 });
+  }, [data.posts]);
+
   const activeGuards = data.guards.filter((g: any) => g.status === 'ACTIVE').length;
-  const unmannedPosts = data.posts.filter((p: any) => !p.guardId).length;
-  const totalDeployments = data.posts.length - unmannedPosts;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#E9EBEF]">
@@ -58,8 +75,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className={`px-4 py-2 rounded-xl flex flex-col items-center shadow-sm transition-colors ${syncStatus === "error" ? "bg-red-600" : "bg-[#F59E0B]"
-            } text-white`}>
+          <div className={`px-4 py-2 rounded-xl flex flex-col items-center shadow-sm transition-colors ${syncStatus === "error" ? "bg-red-600" : "bg-[#F59E0B]"} text-white`}>
             <span className="text-[8px] font-black uppercase opacity-70">Network</span>
             <span className="text-[10px] font-black italic flex items-center gap-1 uppercase">
               {isSyncing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
@@ -84,12 +100,12 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* SUMMARY SECTION - Using the new StatCard component */}
+        {/* SUMMARY SECTION */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <StatCard
             title="Total Guards"
             value={data.guards.length}
-            subtitle={`${activeGuards} Active personnel`}
+            subtitle={`${activeGuards} Registered personnel`}
             color="blue"
             icon={Users}
           />
@@ -102,15 +118,15 @@ export default function DashboardPage() {
           />
           <StatCard
             title="Deployments"
-            value={totalDeployments}
-            subtitle="Currently Occupied"
+            value={metrics.totalDeployed}
+            subtitle="Active Guard Slots"
             color="orange"
             icon={Shield}
           />
           <StatCard
             title="Unmanned"
-            value={unmannedPosts}
-            subtitle="Awaiting Assignment"
+            value={metrics.totalUnmannedSlots}
+            subtitle="Missing Personnel"
             color="red"
             icon={Clock}
           />
@@ -130,30 +146,39 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {data.posts.map((post: any) => (
-              <div key={post.id} className="bg-white rounded-[1.5rem] shadow-sm flex flex-col overflow-hidden border border-black/5 hover:shadow-xl transition-all">
-                <div className="flex justify-end h-1.5">
-                  <div className="w-1/2 bg-[#F59E0B] rounded-bl-lg" />
-                </div>
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-2 text-slate-400">
-                    <span className="text-[9px] font-black uppercase">
-                      {post.client?.name || "Unassigned Site"}
-                    </span>
-                    <span className="text-[10px] font-bold opacity-30">#{post.id}</span>
+            {data.posts.map((post: any) => {
+              const currentGuards = post.guards?.length || 0;
+              const totalRequired = (post.requiredDayGuards || 0) + (post.requiredNightGuards || 0);
+              const isFullyManned = currentGuards >= totalRequired;
+
+              return (
+                <div key={post.id} className="bg-white rounded-[1.5rem] shadow-sm flex flex-col overflow-hidden border border-black/5 hover:shadow-xl transition-all">
+                  <div className="flex justify-end h-1.5">
+                    <div className={`w-1/2 rounded-bl-lg ${isFullyManned ? 'bg-green-500' : 'bg-orange-500'}`} />
                   </div>
-                  <h2 className="text-xl font-black text-[#1B2537] italic uppercase mb-6 tracking-tighter leading-tight">
-                    {post.title}
-                  </h2>
-                  <div className="flex justify-between items-center border-t border-slate-50 pt-4">
-                    <span className="text-slate-400 font-black text-[8px] uppercase tracking-widest">Personnel</span>
-                    <span className={`text-[10px] font-black italic ${post.guardId ? 'text-green-600' : 'text-orange-600'}`}>
-                      {post.guardId ? '1 ACTIVE' : 'UNMANNED'}
-                    </span>
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-2 text-slate-400">
+                      <span className="text-[9px] font-black uppercase">
+                        {post.client?.name || "Unassigned Site"}
+                      </span>
+                      <span className="text-[10px] font-bold opacity-30">#{post.id}</span>
+                    </div>
+                    <h2 className="text-xl font-black text-[#1B2537] italic uppercase mb-6 tracking-tighter leading-tight">
+                      {post.title}
+                    </h2>
+                    <div className="flex justify-between items-center border-t border-slate-50 pt-4">
+                      <div className="flex flex-col">
+                        <span className="text-slate-400 font-black text-[8px] uppercase tracking-widest">Personnel</span>
+                        <span className="text-[8px] font-bold text-slate-300">Goal: {totalRequired}</span>
+                      </div>
+                      <span className={`text-[10px] font-black italic ${isFullyManned ? 'text-green-600' : 'text-orange-600'}`}>
+                        {currentGuards} / {totalRequired} ACTIVE
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

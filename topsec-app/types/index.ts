@@ -32,9 +32,13 @@ export interface Post {
     title: string;
     content?: string | null;
     location?: string;
+    // New Quota Fields
+    requiredDayGuards: number;
+    requiredNightGuards: number;
+
     clientId: number;
     client: Client;
-    guards: PostGuard[]; // Array of assignments (can have multiple)
+    guards: PostGuard[];
 }
 
 export interface ApiResponse<T> {
