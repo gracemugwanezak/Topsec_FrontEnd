@@ -11,7 +11,6 @@ interface GuardFormModalProps {
     onSuccess: () => void;
 }
 
-// 🛡️ We define the shape of the error instead of using 'any'
 interface ApiError {
     response?: {
         data?: {
@@ -56,7 +55,6 @@ export default function GuardFormModal({ guard, onClose, onSuccess }: GuardFormM
             onSuccess();
             onClose();
         } catch (err: unknown) {
-            // 🛡️ Safe type casting: check if it's an error we recognize
             const serverError = err as ApiError;
             const message = serverError.response?.data?.message || "Something went wrong";
             setError(Array.isArray(message) ? message[0] : message);
@@ -86,14 +84,60 @@ export default function GuardFormModal({ guard, onClose, onSuccess }: GuardFormM
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <input
-                        required
-                        placeholder="Full Name"
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3.5 px-4 text-xs font-black uppercase outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
-                    {/* ... other inputs following same pattern ... */}
+                    {/* Full Name */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 ml-2 uppercase">Full Name</label>
+                        <input
+                            required
+                            placeholder="Enter Name"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3.5 px-4 text-xs font-black uppercase outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        />
+                    </div>
+
+                    {/* ID Number - Fixed for 16-digit requirement */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 ml-2 uppercase">National ID Number</label>
+                        <input
+                            required
+                            maxLength={16}
+                            placeholder="16-Digit ID Number"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3.5 px-4 text-xs font-black uppercase outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                            value={formData.idNumber}
+                            onChange={(e) => {
+                                // Only allow numbers to avoid validation errors
+                                const val = e.target.value.replace(/\D/g, "");
+                                setFormData({ ...formData, idNumber: val });
+                            }}
+                        />
+                        <p className="text-[9px] text-slate-400 ml-2">{formData.idNumber.length}/16 characters</p>
+                    </div>
+
+                    {/* Phone Number */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 ml-2 uppercase">Contact Phone</label>
+                        <input
+                            required
+                            placeholder="Phone Number"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3.5 px-4 text-xs font-black uppercase outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                            value={formData.phoneNumber}
+                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                        />
+                    </div>
+
+                    {/* Home Residence */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 ml-2 uppercase">Home Residence</label>
+                        <input
+                            required
+                            placeholder="Current Address/Residence"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3.5 px-4 text-xs font-black uppercase outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                            value={formData.homeResidence}
+                            onChange={(e) => setFormData({ ...formData, homeResidence: e.target.value })}
+                        />
+                    </div>
+
                     <div className="flex gap-3 pt-4">
                         <button type="button" onClick={onClose} className="flex-1 py-4 text-[10px] font-black uppercase text-slate-400">Cancel</button>
                         <button

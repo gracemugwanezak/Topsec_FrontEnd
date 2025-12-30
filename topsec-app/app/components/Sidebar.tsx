@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { api } from "../lib/api";
+import { api } from "../../lib/api";
 import { LayoutDashboard, Shield, Users, MapPin, ClipboardList } from "lucide-react";
 
 export default function Sidebar() {

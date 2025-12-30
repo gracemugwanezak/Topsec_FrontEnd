@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import Sidebar from "../components/Sidebar";
+import Sidebar from "./components/Sidebar";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
 

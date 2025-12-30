@@ -1,13 +1,19 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import { Search, UserPlus, ShieldCheck, Loader2, MapPin, ArrowRightLeft, UserMinus } from "lucide-react";
+import {
+    Search, UserPlus, ShieldCheck, Loader2, MapPin,
+    ArrowRightLeft, UserMinus, Link2Off
+} from "lucide-react";
 import GuardFormModal from "../components/GuardFormModal.tsx";
+import ReassignModal from "../components/ReassignModal";
 
 export default function GuardsPage() {
     const [guards, setGuards] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [selectedGuard, setSelectedGuard] = useState<any>(null);
 
     const fetchGuards = async () => {
         try {
@@ -15,14 +21,42 @@ export default function GuardsPage() {
             const res = await api.get("/guards");
             const data = Array.isArray(res) ? res : (res as any).data || [];
             setGuards(data);
-        } catch (e) { console.error(e); } finally { setLoading(false); }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { fetchGuards(); }, []);
 
+    const handleAssignClick = (guard: any) => {
+        setSelectedGuard(guard);
+        setIsAssignModalOpen(true);
+    };
+
+    const handleUnassign = async (guardId: number) => {
+        if (!confirm("Are you sure you want to remove this guard from their current post?")) return;
+        try {
+            await api.delete(`/guards/${guardId}/assignment`);
+            fetchGuards(); // Refresh list
+        } catch (e) {
+            alert("Failed to unassign guard.");
+        }
+    };
+
+    const handleDeleteGuard = async (guardId: number) => {
+        if (!confirm("PERMANENT ACTION: Delete this guard from the database?")) return;
+        try {
+            await api.delete(`/guards/${guardId}`);
+            fetchGuards();
+        } catch (e) {
+            alert("Failed to delete guard.");
+        }
+    };
+
     return (
         <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
-            {/* COMPACT HEADER */}
             <header className="bg-white px-6 py-3 flex items-center justify-between border-b sticky top-0 z-50">
                 <div className="flex items-center gap-4">
                     <h1 className="text-lg font-bold text-slate-800 tracking-tight">Personnel Database</h1>
@@ -50,7 +84,6 @@ export default function GuardsPage() {
             </header>
 
             <main className="p-6">
-                {/* COMPACT STATS (Smaller Footprint) */}
                 <div className="flex gap-4 mb-6">
                     {[{ label: "Total Personnel", val: guards.length, color: "slate" },
                     { label: "Unassigned", val: guards.filter(g => !g.posts?.length).length, color: "amber" }
@@ -62,15 +95,14 @@ export default function GuardsPage() {
                     ))}
                 </div>
 
-                {/* DENSE LIST VIEW (Best for 5000+ records) */}
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Officer</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">National ID</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Current Deployment</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase text-right">Actions</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Officer</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">National ID</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Deployment</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -90,27 +122,50 @@ export default function GuardsPage() {
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">{guard.idNumber || "Not Set"}</td>
+
                                     <td className="px-4 py-3">
                                         {guard.posts && guard.posts.length > 0 ? (
-                                            <div className="flex items-center gap-2 text-green-600">
-                                                <MapPin size={12} />
-                                                <span className="text-[10px] font-black uppercase italic">{guard.posts[0].post.title}</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest italic leading-none mb-1">
+                                                    {guard.posts[0].post.client?.name || "No Client Data"}
+                                                </span>
+                                                <div className="flex items-center gap-1.5 text-emerald-600 font-black italic uppercase text-[10px] tracking-tighter">
+                                                    <MapPin size={12} className="shrink-0" />
+                                                    <span>{guard.posts[0].post.title}</span>
+                                                </div>
                                             </div>
                                         ) : (
-                                            <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded uppercase">Unassigned</span>
+                                            <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded-md uppercase italic tracking-tighter">Unassigned</span>
                                         )}
                                     </td>
+
                                     <td className="px-4 py-3 text-right">
-                                        <div className="flex justify-end gap-2">
+                                        <div className="flex justify-end gap-1">
+                                            {/* ASSIGN / REASSIGN */}
                                             <button
-                                                title="Assign/Reassign"
-                                                className="p-2 text-slate-400 hover:bg-amber-500 hover:text-white rounded-lg transition-all"
+                                                onClick={() => handleAssignClick(guard)}
+                                                title="Assign to Post"
+                                                className="p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all"
                                             >
                                                 <ArrowRightLeft size={14} />
                                             </button>
+
+                                            {/* UNASSIGN (Only show if assigned) */}
+                                            {guard.posts && guard.posts.length > 0 && (
+                                                <button
+                                                    onClick={() => handleUnassign(guard.id)}
+                                                    title="Remove from current post"
+                                                    className="p-2 text-slate-400 hover:bg-amber-50 hover:text-amber-600 rounded-lg transition-all"
+                                                >
+                                                    <Link2Off size={14} />
+                                                </button>
+                                            )}
+
+                                            {/* DELETE GUARD */}
                                             <button
+                                                onClick={() => handleDeleteGuard(guard.id)}
                                                 title="Remove from system"
-                                                className="p-2 text-slate-400 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+                                                className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
                                             >
                                                 <UserMinus size={14} />
                                             </button>
@@ -124,6 +179,14 @@ export default function GuardsPage() {
             </main>
 
             {isModalOpen && <GuardFormModal guard={null} onClose={() => setIsModalOpen(false)} onSuccess={fetchGuards} />}
+
+            {isAssignModalOpen && (
+                <ReassignModal
+                    guard={selectedGuard}
+                    onClose={() => setIsAssignModalOpen(false)}
+                    onSuccess={fetchGuards}
+                />
+            )}
         </div>
     );
 }

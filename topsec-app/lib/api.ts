@@ -1,15 +1,20 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 export const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+    // Force 127.0.0.1 to avoid potential IPv6 'localhost' resolution issues on Windows
+    baseURL: 'http://127.0.0.1:3000',
 });
 
-// Adding an interceptor to handle data automatically and clear unused var warnings
+// ADD THIS: Request Logger
+api.interceptors.request.use((config) => {
+    console.log(`📡 SENDING: ${config.method?.toUpperCase()} to ${config.baseURL}${config.url}`);
+    return config;
+});
+
 api.interceptors.response.use(
     (response) => response.data,
-    (err) => {
-        // Use the error variable to log it, fixing the "defined but never used" warning
-        console.error("API Error Response:", err.response?.data || err.message);
-        return Promise.reject(err);
+    (error: AxiosError<any>) => {
+        console.error("❌ API ERROR:", error.response?.status, error.response?.data || error.message);
+        return Promise.reject(error);
     }
 );

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Sidebar from "../../components/Sidebar";
+import Sidebar from "../components/Sidebar";
 import { api } from "../../lib/api";
 
 // 1. Define a strict interface for the logs

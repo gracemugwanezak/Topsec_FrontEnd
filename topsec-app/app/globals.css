@@ -1,27 +1,26 @@
-@import "tailwindcss";
+/* 1. Directives MUST be at the very top */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* 2. Variables next */
 :root {
+  --topsec-blue: #0B1E3D;
+  --offwhite: #F9F8F3;
   --dashboard-bg: #E9EBEF;
-  --sidebar-bg: #1B2537;
-  --card-bg: #F9F8F3;
-  --primary-yellow: #F59E0B; /* The specific dark yellow from your image */
-  --text-main: #1B2537;
-  --error-red: #ED1C24;    /* Reserved only for delete/errors */
+  --primary-yellow: #F59E0B;
 }
 
+/* 3. Global overrides (Remove @layer for now to ensure it loads) */
 body {
-  background-color: var(--dashboard-bg) !important;
-  color: var(--text-main);
+  background-color: #E9EBEF !important;
+  color: #1B2537;
+  margin: 0;
+  padding: 0;
 }
 
 .operation-card {
-  background-color: var(--card-bg);
+  background-color: #F9F8F3;
   border-radius: 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  transition: transform 0.2s ease;
-}
-
-.operation-card:hover {
-  transform: translateY(-4px);
 }

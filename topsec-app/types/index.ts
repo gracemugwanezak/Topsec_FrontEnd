@@ -21,7 +21,17 @@ export interface Guard {
     idNumber: string;
     phoneNumber?: string | null;
     homeResidence: string;
-    posts?: Post[]; // Simplified for this context
+    createdAt?: string | Date; 
+    updatedAt?: string | Date; 
+    posts?: {
+        post: {
+            id: number;
+            title: string;
+            client?: {
+                name: string;
+            };
+        };
+    }[];
 }
 
 // Ensure PostGuard and Post are also synced
