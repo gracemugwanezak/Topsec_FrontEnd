@@ -1,20 +1,30 @@
 import axios, { AxiosError } from 'axios';
 
 export const api = axios.create({
-    // Force 127.0.0.1 to avoid potential IPv6 'localhost' resolution issues on Windows
-    baseURL: 'http://127.0.0.1:3000',
+    // Matches the app.setGlobalPrefix('api') in main.ts
+    baseURL: 'http://127.0.0.1:3000/api',
+    timeout: 8000,
+    headers: {
+        'Content-Type': 'application/json',
+    }
 });
 
-// ADD THIS: Request Logger
 api.interceptors.request.use((config) => {
-    console.log(`📡 SENDING: ${config.method?.toUpperCase()} to ${config.baseURL}${config.url}`);
+    console.log(`📡 SENDING: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
 });
 
 api.interceptors.response.use(
     (response) => response.data,
     (error: AxiosError<any>) => {
-        console.error("❌ API ERROR:", error.response?.status, error.response?.data || error.message);
-        return Promise.reject(error);
+        const status = error.response?.status;
+        const message = error.response?.data?.message || error.message;
+        console.error(`❌ API ERROR [${status}]:`, message);
+
+        return Promise.reject({
+            status,
+            message: Array.isArray(message) ? message[0] : message,
+            original: error
+        });
     }
 );

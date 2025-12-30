@@ -94,7 +94,7 @@ export default function DashboardPage() {
             icon={Users}
           />
           <StatCard
-            title="Active Sites"
+            title="Active clients"
             value={data.clients.length}
             subtitle="Across Rwanda"
             color="slate"
